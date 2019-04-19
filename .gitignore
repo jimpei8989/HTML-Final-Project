@@ -1,0 +1,7 @@
+# Misk
+.DS_Store
+.*.swp
+
+# Data
+# NEVER ADD DATA TO REPO
+data/
