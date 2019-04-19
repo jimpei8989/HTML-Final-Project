@@ -1,6 +1,7 @@
 # Misk
 .DS_Store
 .*.swp
+__pycache__/
 
 # Data
 # NEVER ADD DATA TO REPO
