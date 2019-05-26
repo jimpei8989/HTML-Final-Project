@@ -12,7 +12,8 @@ if __name__ == "__main__":
     modelPath = sys.argv[2]
 
     Xtrain, Ytrain, Xtest = LoadAll(dataDir)
-    print('-> Data Loaded', file = sys.stderr)
+    print('-> Data Loaded', file=sys.stderr)
+    Xtrain=Xtrain[:, 5000:]
 
     reg = LinearRegression(normalize = True, n_jobs = 12)
     reg.fit(Xtrain, Ytrain)
