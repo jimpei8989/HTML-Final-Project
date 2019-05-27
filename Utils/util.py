@@ -73,7 +73,7 @@ class Model:
     def __init__(self, *args):
         pass
 
-    def fit(self, trainX, trainY, validX, validY, *args):
+    def fit(self, trainX, trainY, validX=None, validY=None, *args):
         '''
         Args
             trainX: 2D array (num * input_dim)
@@ -94,7 +94,7 @@ class Model:
             2-tuple (WMAE, NAE)
         '''
         w=np.array([[300],[1],[200]])
-        return np.mean(np.abs(self.predict(X)-Y) @ w), np.mean(np.sum(np.abs(self.predict(X)-Y) / Y, axis=1))
+        return np.mean(np.abs(self.predict(X)-Y) @ w), np.sum(np.abs(self.predict(X)-Y) / Y) / X.shape[0]
 
     def predict(self, X, *args):
         '''
