@@ -11,13 +11,20 @@ if __name__ == "__main__":
     dataDir = sys.argv[1]
     modelPath = sys.argv[2]
 
-    Xtrain, Ytrain, Xtest = LoadAll(dataDir)
+    # Xtrain, Ytrain, Xtest = LoadAll(dataDir)
+    Xtest = LoadData(dataDir + '/X_test.npz')
     print('-> Data Loaded', file=sys.stderr)
-    Xtrain=Xtrain[:, 5000:]
 
-    reg = LinearRegression(normalize = True, n_jobs = 12)
-    reg.fit(Xtrain, Ytrain)
-    print('Training Score:', reg.score(Xtrain, Ytrain))
+    try:
+        reg = load_model(modelPath)
+        print('Load Model')
+    except FileNotFoundError:
+        Xtrain=Xtrain[:, [0]+list(range(5000,Xtrain.shape[1]))]
+        reg = LinearRegression(normalize = True, n_jobs = 32)
+        reg.fit(Xtrain, Ytrain)
+        with open(modelPath, 'wb') as f:
+            pickle.dump(reg, f)
 
-    with open(modelPath, 'wb') as f:
-        pickle.dump(reg, f)
+    # print('Training Score:', reg.score(Xtrain, Ytrain))
+
+    generate_csv(reg,Xtest[:, [0] + list(range(5000, Xtest.shape[1]))])
