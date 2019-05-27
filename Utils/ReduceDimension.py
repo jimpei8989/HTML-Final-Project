@@ -1,7 +1,7 @@
 import os, sys, pickle
 import numpy as np
 import matplotlib.pyplot as plt
-from util import *
+from Utils.util import *
 
 def reduce_dimension(trainX,reduced_dim):
     delta_thetas = np.diff(np.arctan(np.diff(trainX[:,:5000])))
