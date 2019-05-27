@@ -6,11 +6,14 @@ from Utils.util import *
 from Utils.ReduceDimension import reduce_dimension
 
 class LinReg(Model):
-    def fit(self, trainX, trainY):
+    def fit(self, trainX, trainY, reduce_dim=-1):
+        self.reduce_dim=reduce_dim
+        if reduce_dim >= 0:
+            trainX = reduce_dimension(trainX,reduce_dim)
         self.reg = LinearRegression(normalize=True, n_jobs=os.cpu_count()).fit(trainX, trainY)
         return self
     def predict(self, X):
-        return self.reg.predict(X)
+        return self.reg.predict(X if self.reduce_dim < 0 else reduce_dimension(X,self.reduce_dim))
 
 if __name__ == "__main__":
     # The lucky number is the sha256sum of our team name!
@@ -28,7 +31,6 @@ if __name__ == "__main__":
         reg = load_model(model_path)
         print('Load Model')
     except FileNotFoundError:
-        trainX = reduce_dimension(trainX, 20)
         reg = LinReg().fit(trainX, trainY)
         with open(model_path, 'wb') as f:
             pickle.dump(reg, f)
