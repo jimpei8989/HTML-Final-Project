@@ -94,7 +94,8 @@ class Model:
             2-tuple (WMAE, NAE)
         '''
         w=np.array([[300],[1],[200]])
-        return np.mean(np.abs(self.predict(X)-Y) @ w), np.sum(np.abs(self.predict(X)-Y) / Y) / X.shape[0]
+        abs_value=np.abs(self.predict(X)-Y)
+        return np.mean(abs_value @ w), np.sum(abs_value / Y) / X.shape[0]
 
     def predict(self, X, *args):
         '''
