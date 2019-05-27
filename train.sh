@@ -12,4 +12,4 @@ model_path="$3"
 
 cd "$wd"
 
-python3 -m "$(sed 's![/\\]!.!g' <<<"$relative_file" | awk -F '.' 'BEGIN{OFS=FS}{NF--;print}')" "$data_dir" "$model_path"
+time python3 -m "$(sed 's![/\\]!.!g' <<<"$relative_file" | awk -F '.' 'BEGIN{OFS=FS}{NF--;print}')" "$data_dir" "$model_path"
