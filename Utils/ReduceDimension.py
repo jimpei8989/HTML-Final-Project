@@ -1,5 +1,6 @@
 import os, sys, pickle
 import numpy as np
+from sklearn.decomposition import PCA
 #import matplotlib.pyplot as plt
 from Utils.util import *
 
@@ -15,10 +16,22 @@ def reduce_dimension(trainX,reduced_dim):
 
     return np.concatenate((delta_thetas, trainX[:,5000:]), axis=1)
 
+def pca(X, self):
+    if hasattr(self, 'pca_model'):
+        return self.pca_model.transform(X)
+    else:
+        self.pca_model = PCA(n_components = 'mle').fit(X)
+    print(p.n_components)
+    return p.transform(X)
+
 if __name__ == "__main__":
     dataDir = sys.argv[1]
 
     trainX = LoadData(os.path.join(dataDir,'X_train.npz'))
     print('-> Data Loaded', file = sys.stderr)
 
-    reduce_dimension(trainX,20)
+    class aaa():
+        pass
+    a=aaa()
+    #reduce_dimension(trainX,20)
+    t=pca(trainX,a)
