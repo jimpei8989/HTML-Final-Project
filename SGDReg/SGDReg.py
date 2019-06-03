@@ -1,23 +1,23 @@
 import os, sys, pickle
-from multiprocessing import Pool
+from joblib import Parallel, delayed
 import numpy as np
 from sklearn.linear_model import SGDRegressor
 
 from Utils.util import *
 
 class SGDReg(Model):
-    def __init__(self):
-        super().__init__()
-        self.poo=Pool(3)
-    
-    def get_reg(self,tup):
-        idx=np.random.shuffle(np.arange(tup[0].shape[0]))
-        X, Y = tup[0][idx], tup[1][idx]
-        return SGDRegressor(loss='epsilon_insensitive', penalty = 'none', epsilon = 0, shuffle = False, max_iter = 1000, average = 32).fit(X, Y)
+    @staticmethod
+    def get_reg(X,Y):
+        return SGDRegressor(loss='epsilon_insensitive', penalty = 'none', epsilon = 0, shuffle = False, max_iter = 10000, learning_rate = 'adaptive', average = 32).fit(X, Y)
 
     def fit(self, trainX, trainY,*args):
-        self.regs=self.poo.map(self.get_reg, [(trainX.copy(), trainY[:,i].copy()) for i in range(3)])
+        idx=np.arange(trainX.shape[0])
+        np.random.shuffle(idx)
+        trainX, trainY = trainX[idx], trainY[idx]
+        
+        self.regs=Parallel(n_jobs=3, backend="threading")(delayed(SGDReg.get_reg)(trainX, trainY[:,i]) for i in range(trainY.shape[1]))
         return self
+
     def predict(self, X, *args):
         return np.concatenate([reg.predict(X).reshape(-1,1) for reg in self.regs], axis=1)
 
