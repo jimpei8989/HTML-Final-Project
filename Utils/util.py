@@ -1,4 +1,4 @@
-import pickle
+import pickle, os
 import numpy as np
 from sklearn.utils import shuffle
 
@@ -6,9 +6,21 @@ lucky_num = int('fcf7297f5ed12f689932bddde16eb95343daeee556b6e57523a8237aa056c34
 
 # Reference: https://stackoverflow.com/questions/18231135/load-compressed-data-npz-from-file-using-numpy-load
 def LoadData(path):
-    with np.load(path) as npf:
-        a = npf.f.arr_0
-    return a
+    '''
+    Desciption:
+        Load one file from given path. It will try to load .npy first, and if .npy does not exist, it will load .npz file and save .npy file in path.
+    Args
+        path: model path
+    Returns
+        model
+    '''
+    if not os.path.exists(path[:-1]+'y'):
+        with np.load(path[:-1]+'z') as npf:
+            a = npf.f.arr_0
+        np.save(path[:-1]+'y',a)
+        return a
+    else:
+        return np.load(path[:-1]+'y')
 
 def load_data(path):
     return LoadData(path)
