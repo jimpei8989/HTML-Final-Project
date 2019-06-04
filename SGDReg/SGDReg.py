@@ -2,23 +2,23 @@ import os, sys, pickle
 from joblib import Parallel, delayed
 import numpy as np
 from sklearn.linear_model import SGDRegressor
+from sklearn.decomposition import PCA
+from sklearn.utils import shuffle
 
 from Utils.util import *
 
 class SGDReg(Model):
     @staticmethod
     def get_reg(X,Y):
-        return SGDRegressor(loss='epsilon_insensitive', penalty = 'none', epsilon = 0, shuffle = False, max_iter = 10000, learning_rate = 'adaptive', average = 32).fit(X, Y)
+        X, Y = shuffle(X, Y)
+        return SGDRegressor(loss='epsilon_insensitive', penalty = 'none', epsilon = 0, shuffle = False, max_iter = 1000, learning_rate = 'adaptive', average = 32).fit(X, Y)
 
-    def fit(self, trainX, trainY,*args):
-        idx=np.arange(trainX.shape[0])
-        np.random.shuffle(idx)
-        trainX, trainY = trainX[idx], trainY[idx]
-        
+    def _fit(self, trainX, trainY,*args):
+        trainX, trainY = shuffle(trainX, trainY)
         self.regs=Parallel(n_jobs=3, backend="threading")(delayed(SGDReg.get_reg)(trainX, trainY[:,i]) for i in range(trainY.shape[1]))
         return self
 
-    def predict(self, X, *args):
+    def _predict(self, X, *args):
         return np.concatenate([reg.predict(X).reshape(-1,1) for reg in self.regs], axis=1)
 
 if __name__ == "__main__":
@@ -37,8 +37,9 @@ if __name__ == "__main__":
         reg = load_model(model_path)
         print('Load Model')
     except FileNotFoundError:
-        reg = SGDReg().fit(trainX, trainY)
-        with open(model_path, 'wb') as f:
-            pickle.dump(reg, f)
+        pca=load_model(os.path.join(data_dir,'pca_model100'))
+        print('loaded PCA')
+        reg = SGDReg().fit(trainX, trainY, transform_args = pca)
+        save_model(reg, model_path)
 
     print('Training Score:', reg.score(trainX, trainY))
