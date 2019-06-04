@@ -16,13 +16,10 @@ def reduce_dimension(trainX,reduced_dim):
 
     return np.concatenate((delta_thetas, trainX[:,5000:]), axis=1)
 
-def pca(X, self):
-    if hasattr(self, 'pca_model'):
-        return self.pca_model.transform(X)
-    else:
-        self.pca_model = PCA(n_components = 'mle').fit(X)
-    print(p.n_components)
-    return p.transform(X)
+def pca(X):
+    pca_model = PCA(n_components = 100).fit(X)
+    pca_model.fitted = True
+    return pca_model
 
 if __name__ == "__main__":
     dataDir = sys.argv[1]
@@ -30,8 +27,6 @@ if __name__ == "__main__":
     trainX = LoadData(os.path.join(dataDir,'X_train.npz'))
     print('-> Data Loaded', file = sys.stderr)
 
-    class aaa():
-        pass
-    a=aaa()
     #reduce_dimension(trainX,20)
-    t=pca(trainX,a)
+    with open(os.path.join(dataDir,'pca_model100'),'wb') as f:
+        pickle.dump(pca(trainX),f)
