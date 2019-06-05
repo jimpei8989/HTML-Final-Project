@@ -74,6 +74,7 @@ def generate_csv(path_or_clf,X,save_path='./output.csv'):
     np.savetxt(save_path,model.predict(X),delimiter=',')
 
 def DataSplit(X, Y):
+    raise Exception('Use sklearn.model_selection.train_test_split instead')
     Xp, Yp = shuffle(X, Y, random_state = lucky_num)
     cut = int(Xp.shape[0] * 0.8)
     return Xp[:cut, :], Yp[:cut, :], Xp[cut:, :], Yp[:cut, :]
@@ -93,7 +94,7 @@ class Model:
     def __init__(self, *args):
         self.fitted = False
 
-    def _fit(self, trainX, trainY, *args, validX=None, validY=None):
+    def _fit(self, trainX, trainY, *args, validX=None, validY=None, **kwargs):
         '''
         Args
             trainX: 2D array (num * input_dim)
@@ -106,7 +107,7 @@ class Model:
         '''
         raise NotImplementedError
 
-    def fit(self, trainX, trainY, *args, transform_args=(), validX=None, validY=None):
+    def fit(self, trainX, trainY, *args, transform_args=(), validX=None, validY=None, **kwargs):
         '''
         Args
             trainX: 2D array (num * input_dim)
@@ -132,9 +133,9 @@ class Model:
         
         self.fitted = True
         if validX is not None and validY is not None:
-            return self._fit(trainX, trainY, *args, validX=validX, validY=validY)
+            return self._fit(trainX, trainY, *args, validX=validX, validY=validY, **kwargs)
         else:
-            return self._fit(trainX, trainY, *args)
+            return self._fit(trainX, trainY, *args, **kwargs)
 
     def score(self, X, Y, *args, transform_args = ()):
         '''
