@@ -78,10 +78,10 @@ def DataSplit(X, Y):
     cut = int(Xp.shape[0] * 0.8)
     return Xp[:cut, :], Yp[:cut, :], Xp[cut:, :], Yp[:cut, :]
 
-def data_split(X,Y):
+def data_split(X, Y):
     return DataSplit(X,Y)
 
-class FeatureExtraction:
+class FeatureTransform:
     def __init__(self, func=None):
         self.func = func
     def fit(self, X, *args):
@@ -122,13 +122,13 @@ class Model:
             if not isinstance(transform_args, tuple):
                 transform_args = (transform_args,) # convert to a tuple
             if callable(transform_args[0]): # it is a function
-                self.featex = FeatureExtraction(transform_args[0])
+                self.featrans = FeatureTransform(transform_args[0])
             else:
-                self.featex = transform_args[0]
+                self.featrans = transform_args[0]
 
-            if not hasattr(self.featex, 'fitted') or not self.featex.fitted:
-                self.featex.fit(trainX, *transform_args[1:])
-            trainX = self.featex.transform(trainX,*transform_args[1:])
+            if not hasattr(self.featrans, 'fitted') or not self.featrans.fitted:
+                self.featrans.fit(trainX, *transform_args[1:])
+            trainX = self.featrans.transform(trainX,*transform_args[1:])
         
         self.fitted = True
         if validX is not None and validY is not None:
@@ -169,7 +169,7 @@ class Model:
         '''
         if hasattr(self, 'fitted') and not self.fitted:
             raise Exception('The model has not been fitted yet!')
-        if hasattr(self, 'featex'):
-            X = self.featex.transform(X, *transform_args)
+        if hasattr(self, 'featrans'):
+            X = self.featrans.transform(X, *transform_args)
         return self._predict(X, *args)
         
