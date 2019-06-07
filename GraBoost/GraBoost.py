@@ -20,7 +20,8 @@ class GraBoost(Model):
 
 def bruteforce(trainX, trainY, pca, validX, validY, **kwargs):
     reg = GraBoost().fit(trainX, trainY, transform_args=pca, **kwargs)
-    return reg, reg.score(validX, validY)
+    return reg, reg.score(validX, validY)[0]
+
 
 if __name__ == "__main__":
     # The lucky number is the sha256sum of our team name!
@@ -36,16 +37,26 @@ if __name__ == "__main__":
 
     try:
         reg = load_model(model_path)
-        print('Load Model')
+        print('Load Model',file=sys.stderr)
     except FileNotFoundError:
         pca=load_model(os.path.join(data_dir,'pca_model100'))
-        print('loaded PCA')
+        print('loaded PCA',file=sys.stderr)
         trainX, validX, trainY, validY = train_test_split(trainX, trainY, test_size = 0.2)
 
-        regs=Parallel(n_jobs=os.cpu_count()//3, backend="threading")(delayed(bruteforce)(trainX, trainY, pca, validX, validY, n_estimators=500, min_impurity_split=10**mi, max_depth=m, n_iter_no_change=n, tol=t) for mi in range(-7,0) for m in [5,7,20,50,80,100,200] for n in [3,5,7] for t in range(-5,0))
         
-        scores=np.array([reg[1][0] for reg in regs ])
-        reg=regs[np.argmin(scores)][0]
+        models_param=list(delayed(bruteforce)(trainX, trainY, pca, validX, validY, n_estimators=500, min_impurity_decrease=10**mi, max_depth=m, n_iter_no_change=n, tol=t) for mi in range(-7,0) for m in range(6,20) for n in [3,5,7] for t in range(-5,0)))
+        regs = []
+        for i in range(len(models_param)):
+            pid = os.fork()
+            if pid == 0:
+                regs.append(Parallel(n_jobs=os.cpu_count()//3, backend="threading")(models_param[i:min(i+os.cpu_count()//3,len(models_param))]))
+                for r in regs[i:min(i+os.cpu_count()//3,len(models_param))]:
+                    print(r[0],'\n',r[1],end='###\n')
+            else:
+                exit()
+        
+        regs=np.array(regs)
+        reg=regs[np.argmin(regs[:,1]),0]
         print(reg)
         save_model(reg, model_path)
 
