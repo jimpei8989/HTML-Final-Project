@@ -43,21 +43,32 @@ if __name__ == "__main__":
         print('loaded PCA',file=sys.stderr)
         trainX, validX, trainY, validY = train_test_split(trainX, trainY, test_size = 0.2)
 
+        filenum=np.random.randint(0,1000)
+        while os.path.exists('log'+str(filenum)):
+            filenum=np.random.randint(0,1000)
+        f=open('log'+str(filenum),'w')
+        print('open log file "log'+str(filenum)+'"',file=sys.stderr)
         
-        models_param=list(delayed(bruteforce)(trainX, trainY, pca, validX, validY, n_estimators=500, min_impurity_decrease=10**mi, max_depth=m, n_iter_no_change=n, tol=t) for mi in range(-7,0) for m in range(6,20) for n in [3,5,7] for t in range(-5,0)))
-        regs = []
-        for i in range(len(models_param)):
+        models_param=list(delayed(bruteforce)(trainX, trainY, pca, validX, validY, n_estimators=500, min_impurity_decrease=10**mi, max_depth=m, n_iter_no_change=n, tol=10**t) for n in [7] for mi in [-2] for m in range(7,20) for t in np.arange(-6,-9.3,-0.5) )
+        reg,score=None,1e5
+        cpun=32 #os.cpu_count()
+        for i in range(0,len(models_param),cpun//3):
             pid = os.fork()
             if pid == 0:
-                regs.append(Parallel(n_jobs=os.cpu_count()//3, backend="threading")(models_param[i:min(i+os.cpu_count()//3,len(models_param))]))
-                for r in regs[i:min(i+os.cpu_count()//3,len(models_param))]:
-                    print(r[0],'\n',r[1],end='###\n')
+                regs=Parallel(n_jobs=cpun//3, backend="threading")(models_param[i:min(i+cpun//3,len(models_param))])
+                for r in regs:
+                    print(str(r[0].regs[0]),'\n',r[1],sep='', end='\n###\n',file=f)
+
+                min_reg=regs[np.argmin([r[1] for r in regs])]
+                if reg is None or score>min_reg[1]:
+                    reg,score = min_reg
+                    
+                del regs
             else:
+                f.close()
                 exit()
-        
-        regs=np.array(regs)
-        reg=regs[np.argmin(regs[:,1]),0]
-        print(reg)
+        f.close()
+        print(reg.regs[0])
         save_model(reg, model_path)
 
     print('Training Score:', reg.score(trainX, trainY))
