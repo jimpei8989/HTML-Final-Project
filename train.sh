@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
+set -e
 if [[ "$1" == '--help' ]]; then
-	echo 'Usage: ./train.sh PYTHON_MODULE DATA_DIR MODEL_PATH'
+	echo 'Usage: ./train.sh [-d] PYTHON_MODULE DATA_DIR MODEL_PATH
+Options:
+  -d	delete the model first'
 	exit 0
+elif [[ "$1" == '-d' ]]; then
+	rm -f "$4"
+	shift
 fi
 wd="$(dirname "$(readlink -f "$0")")"
 
