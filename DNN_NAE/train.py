@@ -16,17 +16,18 @@ class Model(nn.Module):
         def DenseBN(ipt, opt, drop = 0):
             return nn.Sequential(
                     nn.Linear(ipt, opt),
-                    nn.BatchNorm1d(opt),
-                    nn.ReLU(),
-                    nn.Dropout(drop)
+                    nn.LeakyReLU(0.1126),
                     )
 
         self.DNN = nn.Sequential(
-                DenseBN(10000, 1024, 0.3),
-                DenseBN(1024, 256, 0.4),
-                DenseBN(256, 256, 0.4),
-                DenseBN(256, 64, 0.4),
-                DenseBN(64, 3, 0.5),
+                DenseBN(10000, 1024),
+                DenseBN(1024, 512),
+                nn.Dropout(0.3),
+                DenseBN(512, 512),
+                DenseBN(512, 256),
+                nn.Dropout(0.3),
+                DenseBN(256, 256),
+                nn.Linear(256, 3),
                 )
 
     def forward(self, x):
@@ -47,7 +48,7 @@ def main():
     modelPath = sys.argv[2]     if len(sys.argv) != 1 else 'model.pkl'
     predictPath = sys.argv[3]   if len(sys.argv) != 1 else 'predict.csv'
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     
     loadTS = time.time()
     print('--- Begin Loading Data ---')
@@ -55,6 +56,10 @@ def main():
     print('--- End Loading Data (Elapsed {:2.3f})'.format(time.time() - loadTS))
 
     epochs, batchSize = 1000, 256
+
+    mean = np.mean(np.concatenate([X, testX], axis = 0), axis = 0)
+    std = np.std(np.concatenate([X, testX], axis = 0), axis = 0)
+    X, testX = (X - mean) / std, (testX - mean) / std
 
     trainX, validX, trainY, validY = train_test_split(X, Y, test_size = 0.2, random_state = lucky_num)
     trainNum, validNum = trainX.shape[0], validX.shape[0]
@@ -77,11 +82,12 @@ def main():
     except:
         print('Train Model')
 
-        criterion = NAE
-        optimizer = torch.optim.Adam(model.parameters(), lr = 1e-1)
+        criterion = nn.MSELoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr = 1e-3, weight_decay = 1e-5)
 
         for epoch in range(1, epochs + 1):
             beginTS = time.time()
+            trainLoss, validLoss = 0, 0
             trainScore, validScore = np.zeros(shape = 3), np.zeros(shape = 3)
 
             model.train()
@@ -93,14 +99,22 @@ def main():
                 loss.backward()
                 optimizer.step()
 
+                trainLoss += loss.item() * ipt.shape[0] / trainNum
                 trainScore += score(pred.cpu().data.numpy(), opt.data.numpy()) * ipt.shape[0] / trainNum
 
             model.eval()
             for (ipt, opt) in validLoader:
                 pred = model(ipt.cuda())
+                loss = criterion(pred, opt.cuda())
+
+                validLoss += loss.item() * ipt.shape[0] / validNum
                 validScore += score(pred.cpu().data.numpy(), opt.data.numpy()) * ipt.shape[0] / validNum
 
-            print('Epoch: {0:3d}/{1:3d}\n ~~>TrnLoss: {2[0]:3.5f} / {2[1]:3.5f} / {2[2]:3.5f}\t\tVldLoss: {3[0]:3.5f} / {3[1]:3.5f} / {3[2]:3.5f}'.format(epoch, epochs, trainScore, validScore))
+            print('Epoch: {0:3d}/{1:3d} (Elapsed {2:2.3}s)\n ~~> Train Loss: {3:3.5f} | Train Score: {4[0]:3.5f} / {4[1]:3.5f} / {4[2]:3.5f}\n ~~> Valid Loss: {5:3.5f} | Valid Score: {6[0]:3.5f} / {6[1]:3.5f} / {6[2]:3.5f}'.format(epoch, epochs, time.time() - beginTS, trainLoss, trainScore, validLoss, validScore))
+
+            if epoch % 20 == 0:
+                torch.save(model, 'models/model_{:03d}'.format(epoch))
+
         torch.save(model, modelPath)
             
     # Evaluation
