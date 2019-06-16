@@ -30,6 +30,7 @@ if __name__ == "__main__":
     data_dir = sys.argv[1]
     model_path= sys.argv[2]
     st,ed = list(map(int,sys.argv[3:5]))
+    step=int(sys.argv[5]) if len(sys.argv)>=6 else 1
     
     trainX, trainY = load_data(data_dir + '/X_train.npz'), load_data(data_dir + '/Y_train.npz')
     testX = load_data(data_dir + '/X_test.npz')
@@ -42,10 +43,10 @@ if __name__ == "__main__":
         trainX, validX, trainY, validY = train_test_split(trainX, trainY, test_size = 0.2)
         min_tree, min_score, min_param=None,1e5,0
         base=2
-        for m in range(st,ed+1,2):
+        for m in range(st,ed+1,step):
             for la in range(1,5):
                 print('##### max_depth=',m,'lambda=',base**la,'#'*5)
-                tree = XGBoost().fit(trainX, trainY, max_depth=m,reg_lambda=base**la)#, validX=validX, validY=validY, eval_metric='mae', early_stopping_rounds=10)
+                tree = XGBoost().fit(trainX, trainY, max_depth=m,reg_lambda=base**la, validX=validX, validY=validY, eval_metric='mae', early_stopping_rounds=50)
                 save_model(tree, model_path+str(m)+'la'+str(base**la))
                 print('#'*5+" Training score:", tree.score(trainX, trainY),file=sys.stderr)
                 score=tree.score(validX,validY)
