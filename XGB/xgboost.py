@@ -43,15 +43,9 @@ if __name__ == "__main__":
         min_tree, min_score, min_param=None,1e5,0
         base=2
         for m in range(st,ed+1,2):
-<<<<<<< HEAD
             for la in range(1,5):
                 print('##### max_depth=',m,'lambda=',base**la,'#'*5)
                 tree = XGBoost().fit(trainX, trainY, max_depth=m,reg_lambda=base**la)#, validX=validX, validY=validY, eval_metric='mae', early_stopping_rounds=10)
-=======
-            for la in range(4,8):
-                print('##### max_depth=',m,'lambda=',base**la,'#'*5)
-                tree = XGBoost().fit(trainX, trainY, validX=validX, validY=validY, max_depth=m,reg_lambda=base**la,eval_metric='mae', early_stopping_rounds=10)
->>>>>>> 73dfc5a98cdd7b0576a6b3e28f1b6df4ee2fd178
                 save_model(tree, model_path+str(m)+'la'+str(base**la))
                 print('#'*5+" Training score:", tree.score(trainX, trainY),file=sys.stderr)
                 score=tree.score(validX,validY)
