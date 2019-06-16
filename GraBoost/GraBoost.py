@@ -1,4 +1,4 @@
-import os, sys, pickle
+import os, sys, pickle,gc
 from joblib import Parallel, delayed
 import numpy as np
 from sklearn.ensemble import GradientBoostingRegressor
@@ -18,9 +18,9 @@ class GraBoost(Model):
     def _predict(self, X, *args):
         return np.concatenate([reg.predict(X).reshape(-1,1) for reg in self.regs], axis=1)
 
-def bruteforce(trainX, trainY, pca, validX, validY, **kwargs):
-    reg = GraBoost().fit(trainX, trainY, transform_args=pca, **kwargs)
-    return reg, reg.score(validX, validY)[0]
+def bruteforce(trainX, trainY, validX, validY, **kwargs):
+    reg = GraBoost().fit(trainX, trainY, **kwargs)
+    return reg, reg.score(trainX, trainY)[0], reg.score(validX, validY)[0]
 
 
 if __name__ == "__main__":
@@ -39,8 +39,8 @@ if __name__ == "__main__":
         reg = load_model(model_path)
         print('Load Model',file=sys.stderr)
     except FileNotFoundError:
-        pca=load_model(os.path.join(data_dir,'pca_model100'))
-        print('loaded PCA',file=sys.stderr)
+        #pca=load_model(os.path.join(data_dir,'pca_model100'))
+        #print('loaded PCA',file=sys.stderr)
         trainX, validX, trainY, validY = train_test_split(trainX, trainY, test_size = 0.2)
 
         filenum=np.random.randint(0,1000)
@@ -48,31 +48,41 @@ if __name__ == "__main__":
             filenum=np.random.randint(0,1000)
         f=open('log'+str(filenum),'w')
         print('open log file "log'+str(filenum)+'"',file=sys.stderr)
-        
-        models_param=list(delayed(bruteforce)(trainX, trainY, pca, validX, validY, n_estimators=500, min_impurity_decrease=10**mi, max_depth=m, n_iter_no_change=n, tol=10**t) for n in [7] for mi in [-2] for m in range(7,20) for t in np.arange(-6,-9.3,-0.5) )
-        reg,score=None,1e5
-        cpun=32 #os.cpu_count()
-        for i in range(0,len(models_param),cpun//3):
-            pid = os.fork()
-            if pid == 0:
-                regs=Parallel(n_jobs=cpun//3, backend="threading")(models_param[i:min(i+cpun//3,len(models_param))])
-                for r in regs:
-                    print(str(r[0].regs[0]),'\n',r[1],sep='', end='\n###\n',file=f)
 
-                min_reg=regs[np.argmin([r[1] for r in regs])]
-                if reg is None or score>min_reg[1]:
-                    reg,score = min_reg
-                    
-                del regs
-            else:
+        param_list=[{'max_depth':m, 'tol':10.0**t} for m in range(17,18,2) for t in np.arange(-5,-8,-1)]
+        reg,score=None,1e5
+        cpun=9
+        train_step=int(1*cpun//3)
+        with Parallel(n_jobs=cpun//3, backend="threading") as parallel:
+            try:
+                for i in range(0,len(param_list),train_step):
+                    regs=parallel(delayed(bruteforce)(trainX, trainY, validX, validY, n_estimators=500, min_impurity_decrease=0.02, n_iter_no_change=7, **param) for param in param_list[i:min(i+train_step,len(param_list))])
+                    for r in regs:
+                        print(r[0].regs[0], '\n',r[2],' ',r[1],sep='', end='\n###\n',file=f)
+                    f.flush()
+                    os.fsync(f.fileno())
+
+                    min_reg=regs[int(np.argmin(np.array([r[2] for r in regs])))]
+                    if reg is None or score>min_reg[2]:
+                        reg,score = min_reg[0],min_reg[2]
+                        
+                    del regs,min_reg
+                    gc.collect()
+            except MemoryError:
+                print('MemoryError!')
+                for r in regs:
+                    print(r[0].regs[0], '\n',r[2],' ',r[1],sep='', end='\n###\n',file=f)
+                f.flush()
+                os.fsync(f.fileno())
                 f.close()
-                exit()
+                exit(1)
+
         f.close()
         print(reg.regs[0])
         save_model(reg, model_path)
 
-    print('Training Score:', reg.score(trainX, trainY))
-    print('Validation Score:', reg.score(validX, validY))
+    print('Training Score:', reg.score(trainX, trainY),file=sys.stderr)
+    print('Validation Score:', reg.score(validX, validY),file=sys.stderr)
     #generate_csv(reg,testX)
     #print('generated csv')
 

@@ -13,7 +13,7 @@ class XGBoost(Model):
         return tree
 
     def _fit(self, trainX, trainY, *args, validX=None, validY=None, **kwargs):
-        evals=None
+        evals=()
         if validX is not None and validY is not None:
             valid=xgb.DMatrix(validX, label=validY, nthread=-1)
             evals=[(valid, 'eval')]
@@ -40,22 +40,29 @@ if __name__ == "__main__":
         print("Load Model")
     except FileNotFoundError:
         trainX, validX, trainY, validY = train_test_split(trainX, trainY, test_size = 0.2)
-        min_tree,min_score,i=None,1e5,0
+        min_tree, min_score, min_param=None,1e5,0
+        base=2
         for m in range(st,ed+1,2):
-            for la in np.arange(1,5):
-                print('#####max_depth=',m,'#'*5)
-                tree = XGBoost().fit(trainX, trainY, validX=validX, validY=validY, eval_metric='mae', early_stopping_rounds=5, max_depth=m,reg_lambda=2.0)
-                save_model(tree, model_path+str(m))
-                print('#'*5+"Training score:", tree.score(trainX, trainY),file=sys.stderr)
+<<<<<<< HEAD
+            for la in range(1,5):
+                print('##### max_depth=',m,'lambda=',base**la,'#'*5)
+                tree = XGBoost().fit(trainX, trainY, max_depth=m,reg_lambda=base**la)#, validX=validX, validY=validY, eval_metric='mae', early_stopping_rounds=10)
+=======
+            for la in range(4,8):
+                print('##### max_depth=',m,'lambda=',base**la,'#'*5)
+                tree = XGBoost().fit(trainX, trainY, validX=validX, validY=validY, max_depth=m,reg_lambda=base**la,eval_metric='mae', early_stopping_rounds=10)
+>>>>>>> 73dfc5a98cdd7b0576a6b3e28f1b6df4ee2fd178
+                save_model(tree, model_path+str(m)+'la'+str(base**la))
+                print('#'*5+" Training score:", tree.score(trainX, trainY),file=sys.stderr)
                 score=tree.score(validX,validY)
-                print('#'*5+'Validation Score:', score,file=sys.stderr)
-                if score[0]<min_score:
-                    min_tree=tree
-                    min_score=score[0]
-                    i=m
+                print('#'*5+' Validation Score:', score,file=sys.stderr)
+                if score[0] < min_score:
+                    min_tree = tree
+                    min_score = score[0]
+                    min_param = (m,base**la)
     
     print("Training score:", min_tree.score(trainX, trainY),file=sys.stderr)
     print('Validation Score:', min_tree.score(validX, validY),file=sys.stderr)
-    generate_csv(min_tree, testX,'./output'+str(i)+'.csv')
-    print('best tree ',tree.regs[0])
+    generate_csv(min_tree, testX,'./output'+str(min_param).replace(' ','')+'.csv')
+    print('best tree ', min_param)
 
