@@ -44,20 +44,20 @@ if __name__ == "__main__":
         min_tree, min_score, min_param=None,1e5,0
         base=2
         for m in range(st,ed+1,step):
-            for la in range(1,5):
-                print('##### max_depth=',m,'lambda=',base**la,'#'*5)
-                tree = XGBoost().fit(trainX, trainY, max_depth=m,reg_lambda=base**la, validX=validX, validY=validY, eval_metric='mae', early_stopping_rounds=50)
+            for la in range(0,4):
+                print('### max_depth=',m,'lambda=',base**la,'#'*5,file=sys.stderr)
+                tree = XGBoost().fit(trainX, trainY, max_depth=m,reg_lambda=base**la, n_estimators=100,min_child_weight=0.8, validX=validX, validY=validY, eval_metric='mae', early_stopping_rounds=150, subsample=0.8, silent=0, eta=0.05)
                 save_model(tree, model_path+str(m)+'la'+str(base**la))
-                print('#'*5+" Training score:", tree.score(trainX, trainY),file=sys.stderr)
+                print(' Training score:', tree.score(trainX, trainY),file=sys.stderr)
                 score=tree.score(validX,validY)
-                print('#'*5+' Validation Score:', score,file=sys.stderr)
+                print(' Validation Score:', score,'\n',file=sys.stderr)
                 if score[0] < min_score:
                     min_tree = tree
                     min_score = score[0]
                     min_param = (m,base**la)
     
-    print("Training score:", min_tree.score(trainX, trainY),file=sys.stderr)
-    print('Validation Score:', min_tree.score(validX, validY),file=sys.stderr)
-    generate_csv(min_tree, testX,'./output'+str(min_param).replace(' ','')+'.csv')
-    print('best tree ', min_param)
+    print('\n### Training score:', min_tree.score(trainX, trainY),file=sys.stderr)
+    print('### Validation Score:', min_tree.score(validX, validY), file=sys.stderr)
+    generate_csv(min_tree, testX,'%soutput_%d_%d.csv' % (model_path, *min_param))
+    print('best tree ', min_param, file=sys.stderr)
 
