@@ -34,30 +34,33 @@ if __name__ == "__main__":
     
     trainX, trainY = load_data(data_dir + '/X_train.npz'), load_data(data_dir + '/Y_train.npz')
     testX = load_data(data_dir + '/X_test.npz')
-    print("-> Data loaded", file=sys.stderr)
+    print("-> Data loaded", file=sys.stderr, flush=True)
     
     try: 
         tree = load_model(model_path)
         print("Load Model")
     except FileNotFoundError:
         trainX, validX, trainY, validY = train_test_split(trainX, trainY, test_size = 0.2)
-        min_tree, min_score, min_param=None,1e5,0
+        min_train_score, min_valid_score, min_param=1e5,1e5,0
         base=2
-        for m in range(st,ed+1,step):
+        for m in [12,14,15]: #range(st,ed+1,step):
             for la in range(0,4):
-                print('### max_depth=',m,'lambda=',base**la,'#'*5,file=sys.stderr)
-                tree = XGBoost().fit(trainX, trainY, max_depth=m,reg_lambda=base**la, n_estimators=100,min_child_weight=0.8, validX=validX, validY=validY, eval_metric='mae', early_stopping_rounds=150, subsample=0.8, silent=0, eta=0.05)
+                print('### max_depth=',m,'lambda=',base**la,'#'*5,file=sys.stderr, flush=True)
+                tree = XGBoost().fit(trainX, trainY, max_depth=m,reg_lambda=base**la, tree_method='gpu_hist', n_estimators=100, min_child_weight=0.8, validX=validX, validY=validY, eval_metric='mae', early_stopping_rounds=150, subsample=0.8, silent=0, eta=0.1)
                 save_model(tree, model_path+str(m)+'la'+str(base**la))
-                print(' Training score:', tree.score(trainX, trainY),file=sys.stderr)
-                score=tree.score(validX,validY)
-                print(' Validation Score:', score,'\n',file=sys.stderr)
-                if score[0] < min_score:
-                    min_tree = tree
-                    min_score = score[0]
+                train_score=tree.score(trainX, trainY)
+                print(' Training score:', train_score ,file=sys.stderr)
+                valid_score=tree.score(validX,validY)
+                print(' Validation Score:', valid_score,'\n',file=sys.stderr)
+                sys.stderr.flush()
+                os.fsync(2)
+                del tree
+                if valid_score[0] < min_valid_score[0]:
+                    min_train_score, min_valid_score = train_score, valid_score
                     min_param = (m,base**la)
     
-    print('\n### Training score:', min_tree.score(trainX, trainY),file=sys.stderr)
-    print('### Validation Score:', min_tree.score(validX, validY), file=sys.stderr)
-    generate_csv(min_tree, testX,'%soutput_%d_%d.csv' % (model_path, *min_param))
+    print('\n### Training score:', min_train_score,file=sys.stderr)
+    print('### Validation Score:', min_valid_score, file=sys.stderr)
+    generate_csv('%s%dla%d' %(model_path,*min_param), testX,'%soutput_%d_%d.csv' % (model_path, *min_param))
     print('best tree ', min_param, file=sys.stderr)
 
