@@ -41,12 +41,12 @@ if __name__ == "__main__":
         print("Load Model")
     except FileNotFoundError:
         trainX, validX, trainY, validY = train_test_split(trainX, trainY, test_size = 0.2)
-        min_train_score, min_valid_score, min_param=1e5,1e5,0
+        min_train_score, min_valid_score, min_param=(1e5,1e5), (1e5,1e5), 0
         base=2
-        for m in [12,14,15]: #range(st,ed+1,step):
+        for m in range(st,ed+1,step):
             for la in range(0,4):
                 print('### max_depth=',m,'lambda=',base**la,'#'*5,file=sys.stderr, flush=True)
-                tree = XGBoost().fit(trainX, trainY, max_depth=m,reg_lambda=base**la, tree_method='gpu_hist', n_estimators=100, min_child_weight=0.8, validX=validX, validY=validY, eval_metric='mae', early_stopping_rounds=150, subsample=0.8, silent=0, eta=0.1)
+                tree = XGBoost().fit(trainX, trainY, max_depth=m,reg_lambda=base**la, n_estimators=100, min_child_weight=0.8, validX=validX, validY=validY, eval_metric='mae', early_stopping_rounds=150, subsample=0.8, silent=0, eta=0.1)
                 save_model(tree, model_path+str(m)+'la'+str(base**la))
                 train_score=tree.score(trainX, trainY)
                 print(' Training score:', train_score ,file=sys.stderr)
